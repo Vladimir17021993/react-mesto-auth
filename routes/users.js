@@ -1,7 +1,6 @@
 const express = require('express');
 const {
   getUsers,
-  createUser,
   getUserById,
   updateProfile,
   updateAvatar,
@@ -13,7 +12,7 @@ usersRoutes.get('/users', getUsers);
 
 usersRoutes.get('/users/:userId', getUserById);
 
-usersRoutes.post('/users', express.json(), createUser);
+// usersRoutes.post('/users', express.json(), createUser);
 
 usersRoutes.patch('/users/me', express.json(), updateProfile);
 

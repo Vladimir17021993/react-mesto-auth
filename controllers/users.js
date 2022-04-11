@@ -1,6 +1,10 @@
+const bcrypt = require('bcrypt');
 const { User } = require('../models/user');
 const ErrorBadRequest = require('../utils/ErrorBadRequest');
 const ErrorNotFound = require('../utils/ErrorNotFound');
+const ErrorConflict = require('../utils/ErrorConflict');
+
+const SALT_ROUNDS = 10;
 
 exports.getUsers = async (req, res) => {
   try {
@@ -40,9 +44,26 @@ exports.getUserById = (req, res) => {
 };
 
 exports.createUser = (req, res) => {
-  User.create({ name: req.body.name, about: req.body.about, avatar: req.body.avatar })
+  const {
+    name, about, avatar, email, password,
+  } = req.body;
+
+  User.findOne({ email })
+    .then((user) => {
+      if (user) {
+        throw new ErrorConflict(`Пользователь ${email} уже зарегестрирован.`);
+      }
+      return bcrypt.hash(password, SALT_ROUNDS);
+    })
+    .then((hash) => User.create({
+      name, about, avatar, email, password: hash,
+    }))
     .then((user) => res.send(user))
     .catch((err) => {
+      if (err.name === 'Conflict') {
+        res.status(409).send({ message: err.errorMessage });
+        return;
+      }
       if (err.name === 'ValidationError') {
         let errorMessage = 'Переданы неверные данные: ';
         const errorValues = Object.values(err.errors);
