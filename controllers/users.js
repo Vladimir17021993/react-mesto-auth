@@ -1,27 +1,24 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { User } = require('../models/user');
 const ErrorBadRequest = require('../utils/ErrorBadRequest');
 const ErrorNotFound = require('../utils/ErrorNotFound');
 const ErrorConflict = require('../utils/ErrorConflict');
+const ErrorUnauthorized = require('../utils/ErrorUnauthorized');
+const { JWT_SECRET, SALT_ROUNDS } = require('../config/index');
 
-const SALT_ROUNDS = 10;
-
-exports.getUsers = async (req, res) => {
+exports.getUsers = async (req, res, next) => {
   try {
     const users = await User.find({}).orFail(() => {
       throw new ErrorBadRequest('Произошла ошибка.');
     });
     res.send(users);
   } catch (err) {
-    if (err.statusCode === 400) {
-      res.status(400).send({ message: err.errorMessage });
-    } else {
-      res.status(500).send({ message: err.message });
-    }
+    next(err);
   }
 };
 
-exports.getUserById = (req, res) => {
+exports.getUserById = (req, res, next) => {
   User.findById(req.params.userId)
     .orFail(() => {
       throw new ErrorNotFound(
@@ -30,20 +27,16 @@ exports.getUserById = (req, res) => {
     })
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'NotFound') {
-        res.status(404).send({ message: err.errorMessage });
-        return;
-      }
       if (err.name === 'CastError') {
         const errorMessage = 'Переданы неверные данные';
-        res.status(400).send({ message: errorMessage });
+        next(new ErrorBadRequest(errorMessage));
       } else {
-        res.status(500).send({ message: err.message });
+        next(err);
       }
     });
 };
 
-exports.createUser = (req, res) => {
+exports.createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
@@ -58,12 +51,9 @@ exports.createUser = (req, res) => {
     .then((hash) => User.create({
       name, about, avatar, email, password: hash,
     }))
+    .then((user) => User.findOne({ _id: user._id }))
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'Conflict') {
-        res.status(409).send({ message: err.errorMessage });
-        return;
-      }
       if (err.name === 'ValidationError') {
         let errorMessage = 'Переданы неверные данные: ';
         const errorValues = Object.values(err.errors);
@@ -72,14 +62,14 @@ exports.createUser = (req, res) => {
             errorMessage += `Ошибка в поле ${errVal.path} `;
           }
         });
-        res.status(400).send({ message: errorMessage });
+        next(new ErrorBadRequest(errorMessage));
       } else {
-        res.status(500).send({ message: err.message });
+        next(err);
       }
     });
 };
 
-exports.updateProfile = (req, res) => {
+exports.updateProfile = (req, res, next) => {
   const { name, about } = req.body;
   User.findByIdAndUpdate(
     req.user._id,
@@ -91,10 +81,6 @@ exports.updateProfile = (req, res) => {
     })
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'NotFound') {
-        res.status(404).send({ message: err.errorMessage });
-        return;
-      }
       if (err.name === 'ValidationError') {
         let errorMessage = 'Переданы неверные данные: ';
         const errorValues = Object.values(err.errors);
@@ -103,14 +89,14 @@ exports.updateProfile = (req, res) => {
             errorMessage += `Ошибка в поле ${errVal.path} `;
           }
         });
-        res.status(400).send({ message: errorMessage });
+        next(new ErrorBadRequest(errorMessage));
       } else {
-        res.status(500).send({ message: err.message });
+        next(err);
       }
     });
 };
 
-exports.updateAvatar = (req, res) => {
+exports.updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
   User.findByIdAndUpdate(req.user._id, { avatar }, { new: true })
     .orFail(() => {
@@ -118,10 +104,6 @@ exports.updateAvatar = (req, res) => {
     })
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'NotFound') {
-        res.status(404).send({ message: err.errorMessage });
-        return;
-      }
       if (err.name === 'ValidationError') {
         let errorMessage = 'Переданы неверные данные: ';
         const errorValues = Object.values(err.errors);
@@ -130,9 +112,40 @@ exports.updateAvatar = (req, res) => {
             errorMessage += `Ошибка в поле ${errVal.path} `;
           }
         });
-        res.status(400).send({ message: errorMessage });
+        next(new ErrorBadRequest(errorMessage));
       } else {
-        res.status(500).send({ message: err.message });
+        next(err);
       }
     });
+};
+
+exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+
+  User.findOne({ email }, '+password');
+  const token = jwt.sign(req.body.user.id, JWT_SECRET)
+    .then((user) => {
+      if (!user) {
+        throw new ErrorUnauthorized('Не правильный логин или пароль.');
+      }
+      return bcrypt.compare(password, user.password);
+    })
+    .then((isValid) => {
+      if (!isValid) {
+        throw new ErrorUnauthorized('Не правильный логин или пароль.');
+      }
+
+      res
+        .cookie('jwt', token, {
+          maxAge: 3600000 * 24 * 7,
+          httpOnly: true,
+        });
+
+      res.send({ jwt: req.cookies.jwt });
+    })
+    .catch(next);
+};
+
+exports.getUser = (req, res, next) => {
+
 };
