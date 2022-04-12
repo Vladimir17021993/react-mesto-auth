@@ -12,15 +12,22 @@ exports.getCards = (req, res, next) => {
 };
 
 exports.deleteCardById = (req, res, next) => {
-  Card.findByIdAndRemove(req.params.cardId, { new: true })
+  Card.findById(req.params.cardId)
     .orFail(() => {
       throw new ErrorNotFound(`Карточка с ID ${req.params.cardId} не найдена.`);
     })
-    .then((card) => res.send({ message: `Карточка с id ${card._id} удалена` }))
+    .then((card) => {
+      if (card.owner.toString() !== req.user._id) {
+        throw new ErrorBadRequest('Нельзя удалять чужие карточки');
+      }
+      Card.findByIdAndDelete(req.params.cardId).then(() => {
+        res.send({ message: `Карточка с id ${card._id} удалена` });
+      });
+    })
     .catch((err) => {
       if (err.name === 'CastError') {
         const errorMessage = 'Переданы неверные данные';
-        next(new Error(errorMessage));
+        next(new ErrorBadRequest(errorMessage));
       } else {
         next(err);
       }

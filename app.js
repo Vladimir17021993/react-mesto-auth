@@ -20,7 +20,7 @@ app.use(cookieParser());
 
 app.use(usersRoutes);
 app.use(cardsRoutes);
-app.post('/signup', validators.register, express.json(), createUser);
+app.post('/signup', validators.register, validators.url, express.json(), createUser);
 app.post('/signin', express.json(), login);
 app.use(errors());
 app.use(errorHandler);

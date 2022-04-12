@@ -4,6 +4,7 @@ const {
   getUserById,
   updateProfile,
   updateAvatar,
+  getUser,
 } = require('../controllers/users');
 const auth = require('../midlleware/auth');
 const validators = require('../midlleware/validations');
@@ -12,10 +13,12 @@ const usersRoutes = express.Router();
 
 usersRoutes.get('/users', auth, getUsers);
 
+usersRoutes.get('/user/me', auth, getUser);
+
 usersRoutes.get('/users/:userId', auth, getUserById);
 
 usersRoutes.patch('/users/me', express.json(), auth, updateProfile);
 
-usersRoutes.patch('/users/me/avatar', express.json(), auth, updateAvatar);
+usersRoutes.patch('/users/me/avatar', validators.url, express.json(), auth, updateAvatar);
 
 exports.usersRoutes = usersRoutes;

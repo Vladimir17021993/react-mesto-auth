@@ -122,30 +122,36 @@ exports.updateAvatar = (req, res, next) => {
 exports.login = (req, res, next) => {
   const { email, password } = req.body;
 
-  User.findOne({ email }, '+password');
-  const token = jwt.sign(req.body.user.id, JWT_SECRET)
+  User.findOne({ email }, '+password')
     .then((user) => {
       if (!user) {
         throw new ErrorUnauthorized('Не правильный логин или пароль.');
       }
-      return bcrypt.compare(password, user.password);
-    })
-    .then((isValid) => {
-      if (!isValid) {
-        throw new ErrorUnauthorized('Не правильный логин или пароль.');
-      }
+      return bcrypt.compare(password, user.password)
+        .then((isValid) => {
+          if (!isValid) {
+            throw new ErrorUnauthorized('Не правильный логин или пароль.');
+          }
+          const token = jwt.sign({ _id: user._id }, JWT_SECRET);
+          res
+            .cookie('jwt', token, {
+              maxAge: 3600000 * 24 * 7,
+              httpOnly: true,
+            });
 
-      res
-        .cookie('jwt', token, {
-          maxAge: 3600000 * 24 * 7,
-          httpOnly: true,
+          res.send({ jwt: req.cookies.jwt });
         });
-
-      res.send({ jwt: req.cookies.jwt });
     })
     .catch(next);
 };
 
 exports.getUser = (req, res, next) => {
-
+  User.findOne(req.user.email)
+    .orFail(() => {
+      throw new ErrorNotFound(`Пользователь с ID ${req.user._id} не найден.`);
+    })
+    .then((user) => {
+      res.send({ data: user });
+    })
+    .catch(next);
 };
