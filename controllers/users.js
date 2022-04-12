@@ -146,9 +146,9 @@ exports.login = (req, res, next) => {
 };
 
 exports.getUser = (req, res, next) => {
-  User.findOne(req.user.email)
+  User.findOne(req.user.id)
     .orFail(() => {
-      throw new ErrorNotFound(`Пользователь с ID ${req.user._id} не найден.`);
+      throw new ErrorNotFound(`Пользователь с Id ${req.user.id} не найден.`);
     })
     .then((user) => {
       res.send({ data: user });
