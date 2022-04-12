@@ -1,6 +1,5 @@
 const { Card } = require('../models/card');
-const ErrorBadRequest = require('../utils/ErrorBadRequest');
-const ErrorNotFound = require('../utils/ErrorNotFound');
+const { ErrorBadRequest, ErrorWrongUser, ErrorNotFound } = require('../utils/ErrorBadRequest');
 
 exports.getCards = (req, res, next) => {
   Card.find({})
@@ -18,7 +17,7 @@ exports.deleteCardById = (req, res, next) => {
     })
     .then((card) => {
       if (card.owner.toString() !== req.user._id) {
-        throw new ErrorBadRequest('Нельзя удалять чужие карточки');
+        throw new ErrorWrongUser('Нельзя удалять чужие карточки');
       }
       Card.findByIdAndDelete(req.params.cardId).then(() => {
         res.send({ message: `Карточка с id ${card._id} удалена` });
