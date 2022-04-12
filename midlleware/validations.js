@@ -34,8 +34,8 @@ const url = celebrate({
         return value;
       })
       .messages({
-        'any.required': 'Url не указан',
-        'string.notUrl': 'Url некорректный',
+        'any.required': 'Url не указан.',
+        'string.notUrl': 'Url некорректный.',
       }),
   }),
 });
