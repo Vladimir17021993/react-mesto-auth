@@ -5,8 +5,12 @@ const ErrorNotFound = require('../utils/ErrorNotFound');
 
 exports.getCards = (req, res, next) => {
   Card.find({})
-    .then(() => ({}))
-    .then((cards) => res.send(cards))
+    .then((cards) => {
+      if (!cards) {
+        return ([]);
+      }
+      return res.send(cards);
+    })
     .catch(next);
 };
 
