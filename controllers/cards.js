@@ -1,11 +1,11 @@
 const { Card } = require('../models/card');
-const { ErrorBadRequest, ErrorWrongUser, ErrorNotFound } = require('../utils/ErrorBadRequest');
+const ErrorBadRequest = require('../utils/ErrorBadRequest');
+const ErrorWrongUser = require('../utils/ErrorWrongUser');
+const ErrorNotFound = require('../utils/ErrorNotFound');
 
 exports.getCards = (req, res, next) => {
   Card.find({})
-    .orFail(() => {
-      throw new ErrorBadRequest('Карточки не найдены.');
-    })
+    .then(() => ({}))
     .then((cards) => res.send(cards))
     .catch(next);
 };

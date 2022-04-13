@@ -11,6 +11,7 @@ const { cardsRoutes } = require('./routes/cards');
 const { createUser, login } = require('./controllers/users');
 const errorHandler = require('./midlleware/errorHandler');
 const validators = require('./midlleware/validations');
+const ErrorNotFound = require('./utils/ErrorNotFound');
 
 const app = express();
 
@@ -23,11 +24,10 @@ app.use(cardsRoutes);
 app.post('/signup', validators.register, express.json(), createUser);
 app.post('/signin', validators.register, express.json(), login);
 app.use(errors());
-app.use(errorHandler);
 app.use((req, res, next) => {
-  res.status(404).send({ message: 'Wrong URL' });
-  next();
+  next(new ErrorNotFound('Страница с указаным URL не найдена.'));
 });
+app.use(errorHandler);
 
 async function main() {
   await mongoose.connect('mongodb://localhost:27017/mestodb');

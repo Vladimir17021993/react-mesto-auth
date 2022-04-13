@@ -132,7 +132,8 @@ exports.login = (req, res, next) => {
           if (!isValid) {
             throw new ErrorUnauthorized('Не правильный логин или пароль.');
           }
-          const token = jwt.sign({ _id: user._id }, JWT_SECRET);
+          const id = user._id.toString();
+          const token = jwt.sign({ _id: id }, JWT_SECRET);
           res
             .cookie('jwt', token, {
               maxAge: 3600000 * 24 * 7,
@@ -146,9 +147,9 @@ exports.login = (req, res, next) => {
 };
 
 exports.getUser = (req, res, next) => {
-  User.findOne(req.user.id)
+  User.findById(req.user._id)
     .orFail(() => {
-      throw new ErrorNotFound(`Пользователь с Id ${req.user.id} не найден.`);
+      throw new ErrorNotFound(`Пользователь с Id ${req.user._id} не найден.`);
     })
     .then((user) => {
       res.send({ data: user });
